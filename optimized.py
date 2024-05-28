@@ -6,53 +6,26 @@ import gc
 from functools import wraps
 from collections import Counter
 import configparser
-# import numpy as np
 
-"""Traitement préalable :
+
+""" Solution du problème du sac à dos (KP ou Knapsack)
+    Algorithme par programmation dynamique
+
+    Traitement préalable :
     - conversion des données d'origine en json (.data//actions_source.json)
     - conversion de la 3eme colonne (bénéfice à 2 ans en %)
     par la valeur brute du bénéfice en €. ATTENTION : arrondi à 2 digits
     => .data//fichier actions_tuples_benefice.json
 
-    solution du problème du sac à dos (KP ou Knapsack)
-    Algorithme par Programmation Dynamique
-
-    pseudo-code :
-        pour c de 0 à W faire
-            T[0,c] := 0
-        fin pour
-
-        pour i de 1 à n faire
-            pour c de 0 à W faire
-                si c>=w[i] alors
-                    T[i,c] := max(T[i-1,c], T[i-1, c-w[i]] + p[i])
-                sinon
-                    T[i,c] := T[i-1,c]
-                fin si
-            fin pour
-        fin pour
-        source : https://fr.wikipedia.org/wiki/Probl%C3%A8me_du_sac_%C3%A0_dos
-
-        Il a deux avantages :
-            - rapide si les poids sont entiers (et pas trop grande dispersion des valeurs ?)
-            et la capacité du sac modérée.
-            - pas besoin de trier les variables.
-
-        et un inconvénient :
-            gourmand en mémoire (donc pas de résolution de problèmes de grande taille).
-
-        Il est à noter que cet algorithme ne s’exécute pas en temps polynomial par rapport à la taille de l'entrée.
-        En effet la complexité étant proportionnelle à la capacité du sac W,
-        elle est exponentielle par rapport à son codage.
-        Si les poids des objets sont décimaux, cela oblige à multiplier les poids des objets et la capacité du sac
-        afin de les rendre entiers.
-        Cette opération peut alors rendre l'algorithme très lent.
-
-analyse de la conso mémoire : https://www.ukonline.be/cours/python/opti/chapitre3-5
+    sources :
+    https://en.wikipedia.org/wiki/Knapsack_problem
+    https://fr.wikipedia.org/wiki/Probl%C3%A8me_du_sac_%C3%A0_dos
+    analyse de la conso mémoire : https://www.ukonline.be/cours/python/opti/chapitre3-5
 """
 
 
 class Config:
+    """import configuration from ini file"""
     def __init__(self, config_file='config.ini'):
         self.config_file = config_file
         self.MAX_AMOUNT = None
@@ -80,6 +53,7 @@ config = Config()
 class MeasurePerformance():
     @staticmethod
     def measure_memory(func):
+        """measure memory usage"""
         @wraps(func)  # permet de conserver les attributs spéciaux (module de la lib standard)
         def wrapper(*args, **kwargs):
             tracemalloc.start()
@@ -100,6 +74,7 @@ class MeasurePerformance():
 
     @staticmethod
     def measure_time(func):
+        """measure execution time"""
         @wraps(func)
         def wrapper(*args, **kwargs):
             start_time = time.time()
@@ -113,6 +88,7 @@ class MeasurePerformance():
 
     @staticmethod
     def redir_stdout_to_file(file_path):
+        """redirection of stdout terminal to file"""
         def decorator(func):
             @wraps(func)
             def wrapper(*args, **kwargs):
@@ -127,6 +103,7 @@ class MeasurePerformance():
 
 
 class DataTransformer():
+    """class to handle loading and pre-processing data"""
     def __init__(self, filepath, multiply_factor) -> None:
         self.filepath = filepath
         self.multiply_factor = multiply_factor
@@ -134,16 +111,18 @@ class DataTransformer():
         print(f"taille du jeu de données d'origine : {len(self.data)}")
 
     def load_data(self):
+        """load data from json file"""
         with open(self.filepath, 'r') as file:
             return json.load(file)
 
     def remove_incorrect_values(self, data):
-        # supprime les actions dans le cas ou où la valeur (prix, indice 1) est inférieure ou égale à 0
+        """remove actions where price is =< 0"""
         cleaned_data = [action for action in data if action[1] > 0]
         print(f"nombre de valeurs inférieur ou égale à 0 supprimée : {len(data)-len(cleaned_data)}")
         return cleaned_data
 
     def remove_duplicates(self, data):
+        """remove duplicates actions"""
         # on compte l'occurrence de chaque nom d'action
         action_names = [action[0] for action in data]
         name_counts = Counter(action_names)
@@ -157,17 +136,17 @@ class DataTransformer():
         return data
 
     def multiply_values(self, data):
-        # multiplie les coûts et les bénéfices par le facteur de multiplication
+        """multiply cost and benefices by one factor"""
         data = [(action[0], action[1] * self.multiply_factor, action[2] * self.multiply_factor) for action in data]
         return data
 
     def convert_to_int(self, data):
-        # Convertit les valeurs mises à l'échelle en entiers
+        """convert cost and benefices from float to int"""
         data = [(action[0], int(action[1]), int(action[2])) for action in data]
         return data
 
     def divide_values(self, data):
-        # divise les valeurs après le traitement pour retrouver les valeurs originales
+        """divide cost and benefices by one factor to retrieve original values"""
         data = [(action[0], action[1] / self.multiply_factor, action[2] / self.multiply_factor) for action in data]
         return data
 
@@ -190,8 +169,7 @@ class KnapsackOptimizedSolver():
 
     # @measure_memory
     def initialize_matrix(self):
-        """initialisation de la matrice 💊😎
-        """
+        """initialisation de la matrice 💊😎"""
         # on initialise la matrice (2 listes imbriquées) à 0 (montant+1 * nombre d'actions+1)
         return [[0 for _ in range(self.max_amount + 1)] for _ in range(len(self.data) + 1)]  # self.selected_actions
 
@@ -261,11 +239,13 @@ class Main():
         self.file_output = file_output
 
     def get_matrix_size(self, matrix):
+        """return the matrix size (n x m)"""
         nombre_lignes = len(matrix)
         nombre_colonnes = len(matrix[0])
         return nombre_lignes * nombre_colonnes
 
     def calculate_metrics(self, result_action_list, benefice_total):
+        """calculate of metrics"""
         cout_total = sum([i[1] for i in result_action_list])
         plus_value_pourcent = benefice_total / cout_total
         return cout_total, plus_value_pourcent
