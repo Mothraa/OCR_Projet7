@@ -31,3 +31,7 @@ log/
 htmlcov/
 .pytest_cache/
 assets/
+
+# output subforlders
+.output/
+output/
