@@ -6,7 +6,7 @@ import gc
 from functools import wraps
 from collections import Counter
 import configparser
-
+from pathlib import Path
 
 """ Solution du problème du sac à dos (KP ou Knapsack)
     Algorithme par programmation dynamique
@@ -27,7 +27,7 @@ import configparser
 class Config:
     """import configuration from ini file"""
     def __init__(self, config_file='config.ini'):
-        self.config_file = config_file
+        self.config_file = Path(config_file)
         self.MAX_AMOUNT = None
         self.MULTIPLIER_FACTOR = None
         self.TEXT_SEPARATOR = None
@@ -43,8 +43,8 @@ class Config:
         self.MULTIPLIER_FACTOR = config.getint('DEFAULT', 'MULTIPLIER_FACTOR')
         self.TEXT_SEPARATOR = config.get('DEFAULT', 'TEXT_SEPARATOR')
         self.NB_MEM_STATS = config.getint('DEFAULT', 'NB_MEM_STATS')
-        self.FILE_PATH_INPUT = config.get('DEFAULT', 'FILE_PATH_INPUT')
-        self.FILE_PATH_OUTPUT = config.get('DEFAULT', 'FILE_PATH_OUTPUT')
+        self.FILE_PATH_INPUT = Path(config.get('DEFAULT', 'FILE_PATH_INPUT'))
+        self.FILE_PATH_OUTPUT = Path(config.get('DEFAULT', 'FILE_PATH_OUTPUT'))
 
 
 config = Config()
@@ -92,11 +92,11 @@ class MeasurePerformance():
         def decorator(func):
             @wraps(func)
             def wrapper(*args, **kwargs):
-                original_stdout = sys.stdout
-                with open(file_path, 'w') as f:
+                snapped_stdout = sys.stdout
+                with file_path.open('w') as f:
                     sys.stdout = f
                     result = func(*args, **kwargs)
-                    sys.stdout = original_stdout
+                    sys.stdout = snapped_stdout
                 return result
             return wrapper
         return decorator
@@ -108,11 +108,12 @@ class DataTransformer():
         self.filepath = filepath
         self.multiply_factor = multiply_factor
         self.data = self.load_data()
-        print(f"taille du jeu de données d'origine : {len(self.data)}")
+        print(f"jeu de données source : {filepath}")
+        print(f"taille du jeu de données source : {len(self.data)}")
 
     def load_data(self):
         """load data from json file"""
-        with open(self.filepath, 'r') as file:
+        with self.filepath.open('r') as file:
             return json.load(file)
 
     def remove_incorrect_values(self, data):
