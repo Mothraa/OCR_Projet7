@@ -1,4 +1,4 @@
-# Developpement Front-End - Application de films
+# Algorithmes de traitement de données en python
 
 ## À propos
 
@@ -15,17 +15,6 @@ Cloner le repository
 ```bash
 git clone https://github.com/Mothraa/OCR_projet7.git
 ```
-
-## Utilisation
-
-
-
-## Langages & Frameworks
-
-
-
-## Documentation
-
 
 
 ## Gestion des versions
